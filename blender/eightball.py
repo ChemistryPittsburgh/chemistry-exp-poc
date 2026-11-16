@@ -1,6 +1,8 @@
-"""Magic 8-ball: lacquered shell, recessed window, glowing answer die, wrapped "8" label.
+"""Magic 8-ball: lacquered shell, deep liquid-filled window, floating answer die, "8" circle.
 
 All glyphs are real geometry so they stay crisp at any size; no transmission needed.
+The die is its own node ("Die", with the "Message" text parented to it) resting just under
+the glass, so the runtime can sink it into the murk and float it back up like a real 8-ball.
 """
 
 import math
@@ -13,7 +15,9 @@ import common as c
 WINDOW_DIR = Vector((0.42, -0.8, 0.42)).normalized()  # up-right-front (Blender coords)
 EIGHT_DIR = Vector((-0.66, -0.6, -0.45)).normalized()  # lower-left
 CAP = 0.5
-DEPTH = 0.16
+DEPTH = 0.3  # deep well: the die rises from the murk at the bottom
+REST = 0.1  # die rests this far below the window opening
+LABEL_ANGLE = 0.456  # number circle radius ~0.44 R, like a real pool ball
 
 
 def local(obj, n, roll=0.0):
@@ -47,14 +51,15 @@ def build():
     lacquer = c.principled("Lacquer", color=c.srgb("#070707"), rough=0.18, coat=1.0, coat_rough=0.03)
     c.assign(body, lacquer)
 
-    # --- "8" label ----------------------------------------------------------
-    label = c.lathe("Label", [(0.0, 0.0), (0.205, 0.0)], steps=96)
-    c.wrap_to_sphere(label, EIGHT_DIR, 1.0015, subdivide=6)
+    # --- "8" circle: pool-ball proportions, flush on the lacquer ----------------
+    r = math.tan(LABEL_ANGLE)
+    label = c.lathe("Label", [(r * i / 16, 0.0) for i in range(17)], steps=128)
+    c.wrap_to_sphere(label, EIGHT_DIR, 1.0015, subdivide=1)
     c.face_out(label)
-    c.assign(label, c.principled("LabelWhite", color=c.srgb("#efede6"), rough=0.2, coat=1.0, coat_rough=0.03))
+    c.assign(label, c.principled("LabelWhite", color=c.srgb("#f1efe8"), rough=0.2, coat=1.0, coat_rough=0.03))
 
-    eight = c.text_mesh("Eight", "8", size=0.34, depth=0.0)
-    c.wrap_to_sphere(eight, EIGHT_DIR, 1.0032, roll=-0.35, subdivide=3)
+    eight = c.text_mesh("Eight", "8", size=0.8, depth=0.0)
+    c.wrap_to_sphere(eight, EIGHT_DIR, 1.0032, roll=-0.3, subdivide=3)
     c.face_out(eight)
     c.assign(eight, c.principled("Ink", color=c.srgb("#0a0a0a"), rough=0.25, coat=1.0, coat_rough=0.03))
 
@@ -65,16 +70,25 @@ def build():
     liquid.data.transform(win)
     c.face_out(liquid, WINDOW_DIR)
     c.assign(liquid, c.principled("Liquid", color=c.srgb("#02030c"), rough=0.35,
-                                  emission=c.srgb("#0b1c7a"), strength=0.6))
+                                  emission=c.srgb("#0b1c7a"), strength=0.7))
+
+    # Murky layer just under the resting die: anything below it reads as deep in the liquid.
+    murk = c.lathe("Murk", [(0.0, y0 - REST - 0.016), (rho * 0.995, y0 - REST - 0.016)], steps=96)
+    murk.data.transform(win)
+    c.face_out(murk, WINDOW_DIR)
+    c.assign(murk, c.principled("Murk", color=c.srgb("#030719"), rough=0.3, alpha=0.82,
+                                emission=c.srgb("#0a1866"), strength=0.35))
 
     die = die_mesh()
-    die.data.transform(win @ _translate((0, 0.02, floor + 0.02)))
+    die.data.transform(_translate((0, 0.02, 0)))
+    die.matrix_world = win @ _translate((0, 0, y0 - REST))
     c.assign(die, c.principled("Die", color=c.srgb("#0a1a8a"), rough=0.45,
                                emission=c.srgb("#1e3cff"), strength=1.2))
 
     msg = c.text_mesh("Message", "Data\nRitual\nComplete", size=0.066, depth=0.0, spacing=0.9)
-    msg.data.transform(win @ _translate((0, 0.075, floor + 0.02 + 0.038)))
-    c.face_out(msg, WINDOW_DIR)
+    msg.data.transform(_translate((0, 0.075, 0.038)))
+    c.face_out(msg, (0, 0, 1))
+    msg.parent = die
     c.assign(msg, c.principled("MessageGlow", color=c.srgb("#dce8ff"), rough=0.5,
                                emission=c.srgb("#d6e4ff"), strength=5.0))
 
@@ -92,7 +106,7 @@ def build():
     c.smart_uv(body)
     c.bake_ao(body, size=1024, samples=128, distance=0.35)
 
-    c.export_glb("eightball", [body, label, eight, liquid, die, msg, bezel, lens])
+    c.export_glb("eightball", [body, label, eight, liquid, murk, die, msg, bezel, lens])
 
 
 def _translate(v):

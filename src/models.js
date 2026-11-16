@@ -46,6 +46,8 @@ export async function loadSphere(id) {
     for (const m of glowMats) m.emissiveIntensity = m.userData.baseEmissive * glow * pulse;
   };
 
+  // Pages call rig.userData.activate() when a sphere becomes the focus (no-op by default).
+  rig.userData.activate = () => {};
   const extra = (RIGS[id] || (() => () => {}))(root, rig);
   rig.userData.update = (t, dt) => {
     applyGlow(1);
@@ -125,8 +127,68 @@ const RIGS = {
     };
   },
 
-  eightball() {
-    return (t, dt, applyGlow) => applyGlow(0.82 + 0.18 * Math.sin(t * 1.8));
+  eightball(root, rig) {
+    // Real 8-ball behaviour: shake, the die sinks into the murk, then floats up,
+    // turning as it rises, and settles against the glass.
+    const die = root.getObjectByName('Die');
+    if (!die) return (t, dt, applyGlow) => applyGlow(1);
+    const rest = die.position.clone();
+    const normal = rest.clone().normalize();
+    const baseQ = die.quaternion.clone();
+    const spinQ = new THREE.Quaternion();
+    const tiltQ = new THREE.Quaternion();
+    const Y = new THREE.Vector3(0, 1, 0); // window axis in the die's local frame
+    const X = new THREE.Vector3(1, 0, 0);
+    const DEEP = 0.17;
+    const SINK = 0.35;
+    const RISE = 2.1;
+    let now = 0;
+    let shakeAt = -10;
+    let revealAt = 0.3 - SINK; // first load: start already sunk, rise shortly after
+    const easeOut = (x) => 1 - Math.pow(1 - x, 3);
+
+    rig.userData.reveal = () => (revealAt = now);
+    rig.userData.activate = () => {
+      shakeAt = now;
+      revealAt = now + 0.25;
+    };
+
+    return (t, dt, applyGlow) => {
+      now = t;
+      const k = t - revealAt;
+      let depth = 0;
+      let spin = Math.sin(t * 0.6) * 0.05;
+      let tilt = 0;
+      let bright = 1;
+      if (k < 0) {
+        // waiting for a shake to finish: hold where it is
+      } else if (k < SINK) {
+        const p = k / SINK;
+        depth = DEEP * p * p;
+        bright = 1 - p;
+      } else if (k < SINK + RISE) {
+        const p = (k - SINK) / RISE;
+        const e = easeOut(p);
+        depth = DEEP * (1 - e);
+        spin = (1 - e) * 2.4;
+        tilt = Math.sin(k * 5) * 0.22 * (1 - e);
+        bright = 0.15 + 0.85 * e;
+      } else {
+        depth = 0.004 * Math.sin(t * 1.3);
+      }
+      die.position.copy(rest).addScaledVector(normal, -depth);
+      spinQ.setFromAxisAngle(Y, spin);
+      tiltQ.setFromAxisAngle(X, tilt);
+      die.quaternion.copy(baseQ).multiply(spinQ).multiply(tiltQ);
+
+      const s = t - shakeAt;
+      root.position.set(0, 0, 0);
+      if (s >= 0 && s < 0.45) {
+        const amp = 0.06 * (1 - s / 0.45);
+        root.position.set(Math.sin(s * 55) * amp, Math.sin(s * 41) * amp * 0.6, 0);
+      }
+      applyGlow(bright * (0.85 + 0.15 * Math.sin(t * 1.8)));
+    };
   },
 };
 

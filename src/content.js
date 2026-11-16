@@ -12,7 +12,7 @@ export const SPHERES = [
     title: 'Creative and brand innovation',
     line: 'Unignorable stories and ideas that build emotional connection',
     accent: '#c9de2e',
-    pose: [0.12, 0.1, -0.12],
+    pose: [0, 0, 0], // face is painted to match the reference front view
   },
   {
     id: 'eightball',

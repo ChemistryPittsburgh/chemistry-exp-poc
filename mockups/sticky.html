@@ -147,6 +147,7 @@
         if (active >= 0) Object.assign(slots[active], { state: 'out', t0: t });
         Object.assign(slots[i], { state: 'in', t0: t, vel: 14 });
         slots[i].slot.rotation.y = -1.2;
+        slots[i].rig.userData.activate();
         active = i;
         items.forEach((el, k) => el.classList.toggle('is-active', k === i));
         [...progress.children].forEach((el, k) => el.classList.toggle('on', k <= i));

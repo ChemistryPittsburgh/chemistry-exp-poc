@@ -109,6 +109,7 @@
       const clamp01 = (x) => Math.min(Math.max(x, 0), 1);
       const smooth = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
       let spinVel = 0;
+      let activated = -1;
 
       view.update = (t, dt) => {
         const narrow = innerWidth <= 760;
@@ -138,6 +139,8 @@
           spinVel += ((0.6 + 2.4 * (1 - lit)) - spinVel) * Math.min(dt * 4, 1);
           g.rotation.y += spinVel * dt;
           rig.userData.setGlow(lit + flash);
+          if (lit > 0.6 && activated !== active) { activated = active; rig.userData.activate(); }
+          if (lit < 0.1 && q < 0.3) activated = -1;
           root.style.setProperty('--accent', SPHERES[active].accent);
           spot.style.setProperty('--x', side * 21);
           beam.style.setProperty('--x', side * 21);

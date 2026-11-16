@@ -36,6 +36,9 @@ def radius(d, detail=True):
     s = ((lon / math.tau) * PANELS) % 1.0
     panel = math.sin(math.pi * s) ** 0.3
     puff = band * (0.45 + 0.55 * panel)
+    # Flatter placket either side of the zipper so the zip area reads wider.
+    x = max(0.0, min(1.0, (abs(lon) - 0.07) / 0.09))
+    puff *= 0.25 + 0.75 * x * x * (3 - 2 * x)
     r = 0.95 + 0.05 * puff
     if detail:
         pinch = (1 - band) ** 2
@@ -123,10 +126,14 @@ def build_zipper():
         t = (nxt - prv).normalized()
         side = t.cross(n).normalized()
         n = side.cross(t).normalized()
-        offset = 0.007 if i % 2 else -0.007
-        add_box(teeth, p + side * offset + n * 0.004, side, t, n, 0.011, 0.0035, 0.0045)
-        left.append(tape.verts.new(p - side * 0.03))
-        right.append(tape.verts.new(p + side * 0.03))
+        offset = 0.009 if i % 2 else -0.009
+        add_box(teeth, p + side * offset + n * 0.005, side, t, n, 0.014, 0.0038, 0.0052)
+        for sign, row in ((-1, left), (1, right)):
+            q = p + side * (0.058 * sign)
+            if q.z < 0.74:  # on the body: hug the quilted surface
+                d = q.normalized()
+                q = d * (radius(d, detail=False) + 0.004)
+            row.append(tape.verts.new(q))
     for i in range(len(pts) - 1):
         tape.faces.new((left[i], right[i], right[i + 1], left[i + 1]))
     bmesh.ops.recalc_face_normals(teeth, faces=teeth.faces)
@@ -149,7 +156,7 @@ def build_zipper():
 
 def build():
     c.reset()
-    nylon = dict(color=c.srgb("#1d2ab8"), rough=0.32, coat=0.85, coat_rough=0.12,
+    nylon = dict(color=c.srgb("#1d2ab8"), rough=0.5, coat=0.3, coat_rough=0.38,
                  sheen=0.25, sheen_tint=c.srgb("#9fb0ff"), sheen_rough=0.35)
 
     high = c.uv_sphere("PufferHigh", segments=768, rings=384, displace=lambda d: radius(d, True))

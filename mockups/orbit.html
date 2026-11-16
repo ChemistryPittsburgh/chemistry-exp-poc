@@ -139,6 +139,7 @@
           requestAnimationFrame(() => requestAnimationFrame(() => copy.classList.remove('is-entering')));
         }, shown === -1 ? 0 : 300);
         buttons.forEach((b, k) => b.classList.toggle('on', k === i));
+        rigs[i]?.userData.activate();
       }
 
       // Scroll -> ring angle, with a dwell at each sphere so they "click" into place.

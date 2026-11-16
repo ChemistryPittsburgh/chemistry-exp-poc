@@ -73,6 +73,12 @@
         loadSphere(s.id).then((rig) => {
           stage.setObject(view, rig);
           el.querySelector('.loading').remove();
+          // Click (not drag) to interact, e.g. shake the 8-ball for a new reveal.
+          let down = null;
+          el.addEventListener('pointerdown', (e) => (down = [e.clientX, e.clientY]));
+          el.addEventListener('click', (e) => {
+            if (down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) < 6) rig.userData.activate();
+          });
         });
       }
     </script>

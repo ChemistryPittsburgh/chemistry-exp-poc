@@ -19,7 +19,7 @@ import common as c  # noqa: E402
 # Same hero poses as src/models.js, converted from three.js (Y-up) to Blender (Z-up).
 POSES = {
     "puffer": (0.05, 0.0, 0.0),
-    "tennis": (0.12, 0.12, 0.1),
+    "tennis": (0.0, 0.0, 0.0),
     "eightball": (0.0, 0.0, 0.0),
     "robot": (0.04, 0.0, -0.55),
 }
