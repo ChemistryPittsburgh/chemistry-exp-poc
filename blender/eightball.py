@@ -70,14 +70,14 @@ def build():
     liquid.data.transform(win)
     c.face_out(liquid, WINDOW_DIR)
     c.assign(liquid, c.principled("Liquid", color=c.srgb("#02030c"), rough=0.35,
-                                  emission=c.srgb("#0b1c7a"), strength=0.7))
+                                  emission=c.srgb("#0b1c7a"), strength=0.12))
 
     # Murky layer just under the resting die: anything below it reads as deep in the liquid.
     murk = c.lathe("Murk", [(0.0, y0 - REST - 0.016), (rho * 0.995, y0 - REST - 0.016)], steps=96)
     murk.data.transform(win)
     c.face_out(murk, WINDOW_DIR)
-    c.assign(murk, c.principled("Murk", color=c.srgb("#030719"), rough=0.3, alpha=0.82,
-                                emission=c.srgb("#0a1866"), strength=0.35))
+    c.assign(murk, c.principled("Murk", color=c.srgb("#01030b"), rough=0.3, alpha=0.88,
+                                emission=c.srgb("#0a1866"), strength=0.08))
 
     die = die_mesh()
     die.data.transform(_translate((0, 0.02, 0)))
