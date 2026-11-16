@@ -104,7 +104,7 @@ def add_tennis_fur(objects):
     st.hair_length = 0.03
     st.use_advanced_hair = True
     st.child_type = "INTERPOLATED"
-    st.rendered_child_count = 16
+    st.rendered_child_count = 12
     st.child_radius = 0.02
     st.roughness_1 = 0.006
     st.roughness_2 = 0.006
