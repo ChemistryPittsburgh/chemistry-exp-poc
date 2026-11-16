@@ -37,6 +37,10 @@
       .stage { position: relative; aspect-ratio: 1; cursor: grab; }
       .stage:active { cursor: grabbing; }
       .stage canvas { display: block; width: 100%; height: 100%; }
+      .ref {
+        position: absolute; right: 12px; bottom: 12px; width: 84px; height: 84px;
+        border-radius: 8px; border: 1px solid var(--line); opacity: 0.85; pointer-events: none;
+      }
       figcaption {
         display: flex; justify-content: space-between; gap: 12px;
         padding: 12px 16px; border-top: 1px solid var(--line);
@@ -55,12 +59,12 @@
   <body>
     <main>
       <h1>Expertise spheres in Three.js</h1>
-      <p class="lede">Procedural, real-time 3D spheres. Drag to orbit.</p>
+      <p class="lede">Procedural, real-time 3D spheres. Drag to orbit. The thumbnail in each corner is the original design render.</p>
       <div class="grid">
-        <figure><div class="stage" data-model="puffer"></div><figcaption>Puffer ball<span>Market &amp; consumer research</span></figcaption></figure>
-        <figure><div class="stage" data-model="tennis"></div><figcaption>Tennis smiley<span>Creative &amp; Brand Innovation</span></figcaption></figure>
-        <figure><div class="stage" data-model="eight"></div><figcaption>Data Ritual 8-ball<span>Media, Performance &amp; Intelligence</span></figcaption></figure>
-        <figure><div class="stage" data-model="robot"></div><figcaption>Robot pod<span>Digital Experience &amp; Engagement</span></figcaption></figure>
+        <figure><div class="stage" data-model="puffer"><img class="ref" src="reference/puffer.png" alt="Design reference" /></div><figcaption>Puffer ball<span>Market &amp; consumer research</span></figcaption></figure>
+        <figure><div class="stage" data-model="tennis"><img class="ref" src="reference/tennis.png" alt="Design reference" /></div><figcaption>Tennis smiley<span>Creative &amp; Brand Innovation</span></figcaption></figure>
+        <figure><div class="stage" data-model="eight"><img class="ref" src="reference/eight-ball.png" alt="Design reference" /></div><figcaption>Data Ritual 8-ball<span>Media, Performance &amp; Intelligence</span></figcaption></figure>
+        <figure><div class="stage" data-model="robot"><img class="ref" src="reference/robot.png" alt="Design reference" /></div><figcaption>Robot pod<span>Digital Experience &amp; Engagement</span></figcaption></figure>
       </div>
     </main>
     <script type="module">
