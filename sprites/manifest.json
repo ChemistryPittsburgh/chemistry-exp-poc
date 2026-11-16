@@ -9,44 +9,44 @@
   "spheres": {
     "puffer": {
       "sheets": {
-        "72": {
-          "file": "puffer-72.webp",
-          "rows": 6,
-          "bytes": 900342
+        "24": {
+          "file": "puffer-24.webp",
+          "rows": 2,
+          "bytes": 296082
         },
         "36": {
           "file": "puffer-36.webp",
           "rows": 3,
-          "bytes": 453530
+          "bytes": 445112
         },
-        "24": {
-          "file": "puffer-24.webp",
-          "rows": 2,
-          "bytes": 302206
+        "72": {
+          "file": "puffer-72.webp",
+          "rows": 6,
+          "bytes": 883432
         }
       },
       "anim": {
         "file": "puffer-anim.webp",
         "frames": 36,
-        "bytes": 475048
+        "bytes": 460732
       }
     },
     "tennis": {
       "sheets": {
-        "72": {
-          "file": "tennis-72.webp",
-          "rows": 6,
-          "bytes": 958324
+        "24": {
+          "file": "tennis-24.webp",
+          "rows": 2,
+          "bytes": 319674
         },
         "36": {
           "file": "tennis-36.webp",
           "rows": 3,
           "bytes": 479684
         },
-        "24": {
-          "file": "tennis-24.webp",
-          "rows": 2,
-          "bytes": 319674
+        "72": {
+          "file": "tennis-72.webp",
+          "rows": 6,
+          "bytes": 958324
         }
       },
       "anim": {
@@ -57,50 +57,50 @@
     },
     "eightball": {
       "sheets": {
-        "72": {
-          "file": "eightball-72.webp",
-          "rows": 6,
-          "bytes": 677400
+        "24": {
+          "file": "eightball-24.webp",
+          "rows": 2,
+          "bytes": 145870
         },
         "36": {
           "file": "eightball-36.webp",
           "rows": 3,
-          "bytes": 340560
+          "bytes": 217614
         },
-        "24": {
-          "file": "eightball-24.webp",
-          "rows": 2,
-          "bytes": 228014
+        "72": {
+          "file": "eightball-72.webp",
+          "rows": 6,
+          "bytes": 431106
         }
       },
       "anim": {
         "file": "eightball-anim.webp",
         "frames": 36,
-        "bytes": 404514
+        "bytes": 271208
       }
     },
     "robot": {
       "sheets": {
-        "72": {
-          "file": "robot-72.webp",
-          "rows": 6,
-          "bytes": 522772
+        "24": {
+          "file": "robot-24.webp",
+          "rows": 2,
+          "bytes": 153346
         },
         "36": {
           "file": "robot-36.webp",
           "rows": 3,
-          "bytes": 265040
+          "bytes": 228068
         },
-        "24": {
-          "file": "robot-24.webp",
-          "rows": 2,
-          "bytes": 178144
+        "72": {
+          "file": "robot-72.webp",
+          "rows": 6,
+          "bytes": 452204
         }
       },
       "anim": {
         "file": "robot-anim.webp",
         "frames": 36,
-        "bytes": 320448
+        "bytes": 279154
       }
     }
   }

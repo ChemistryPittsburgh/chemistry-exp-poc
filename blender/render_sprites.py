@@ -48,7 +48,7 @@ def scene_setup():
     world.use_nodes = True
     nt = world.node_tree
     env = nt.nodes.new("ShaderNodeTexEnvironment")
-    hdr = os.path.join(bpy.utils.system_resource("DATAFILES"), "studiolights", "world", "interior.exr")
+    hdr = os.path.join(bpy.utils.system_resource("DATAFILES"), "studiolights", "world", "studio.exr")
     env.image = bpy.data.images.load(hdr)
     bg = nt.nodes["Background"]
     bg.inputs["Strength"].default_value = 0.7
