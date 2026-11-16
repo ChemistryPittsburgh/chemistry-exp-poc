@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lights On</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="../src/site.css" />
+    <link rel="stylesheet" href="../src/mockup.css" />
+    <style>
+      .fullstage { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+      .spot {
+        position: fixed; z-index: 0; width: 80vmin; height: 80vmin; border-radius: 50%;
+        left: calc(50% + var(--x, 0) * 1vw - 40vmin); top: calc(50% - 40vmin);
+        background: radial-gradient(circle, color-mix(in srgb, var(--accent, #fff) 22%, transparent) 0%, transparent 62%);
+        opacity: var(--lit, 0); pointer-events: none;
+      }
+      .beam {
+        position: fixed; z-index: 0; top: -10vh; height: 70vh; width: 34vmin;
+        left: calc(50% + var(--x, 0) * 1vw - 17vmin);
+        background: linear-gradient(to bottom, rgba(255, 250, 240, 0.09), transparent 85%);
+        clip-path: polygon(42% 0, 58% 0, 100% 100%, 0 100%);
+        opacity: var(--lit, 0); pointer-events: none;
+      }
+      .chapter { position: relative; z-index: 2; height: 190vh; }
+      .chapter .copy {
+        position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; justify-content: center;
+        padding: 0 clamp(16px, 8vw, 146px); max-width: 50%;
+      }
+      .chapter.right .copy { margin-left: auto; }
+      .chapter .num { font-size: 13px; letter-spacing: 0.14em; color: var(--orange); opacity: var(--lit, 0); }
+      .chapter h2 {
+        margin: 12px 0 0; font-size: clamp(34px, 5vw, 76px); line-height: 0.98; text-transform: uppercase; font-weight: 700;
+        color: transparent; -webkit-text-stroke: 1.2px rgba(244, 241, 236, 0.35);
+        background: linear-gradient(to right, var(--text) calc(var(--lit, 0) * 100%), transparent calc(var(--lit, 0) * 100%));
+        -webkit-background-clip: text; background-clip: text;
+      }
+      .chapter p { margin: 18px 0 0; font-size: clamp(16px, 1.4vw, 21px); color: #cfcac2; max-width: 28ch; opacity: var(--lit, 0); transform: translateY(calc((1 - var(--lit, 0)) * 12px)); }
+      .chapter .learn { opacity: var(--lit, 0); }
+      .outro { position: relative; z-index: 2; height: 70vh; display: grid; place-items: center; text-align: center; padding: 0 16px; }
+      .outro h2 { font-size: clamp(30px, 4vw, 56px); text-transform: uppercase; margin: 0; }
+      @media (max-width: 760px) {
+        .chapter .copy { max-width: none; justify-content: flex-end; padding-bottom: 96px; }
+        .spot, .beam { --x: 0 !important; top: 8vh; }
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body id="top">
+    <div class="fullstage" id="fullstage"></div>
+    <div class="beam" id="beam"></div>
+    <div class="spot" id="spot"></div>
+    <section class="hero">
+      <h1>Make it. Move it. Blow it up.</h1>
+      <p>Expertise that blends creativity, digital, and culture to engineer growth.</p>
+      <span class="rule" aria-hidden="true"></span>
+    </section>
+    <div id="chapters"></div>
+    <section class="outro"><div><h2>Four ways we engineer growth.</h2><a class="learn" href="#top">Talk to us</a></div></section>
+
+    <script type="module">
+      import * as THREE from 'three';
+      import { Stage } from '../src/stage.js';
+      import { SPHERES, loadSphere } from '../src/models.js';
+      import { mountNav } from '../src/nav.js';
+      import { mountHeader, mountFooter } from '../src/chrome.js';
+
+      mountHeader();
+      mountFooter();
+      mountNav('spotlight');
+
+      const holder = document.getElementById('chapters');
+      const chapters = SPHERES.map((s, i) => {
+        const el = document.createElement('section');
+        el.className = 'chapter' + (i % 2 ? ' right' : '');
+        el.innerHTML = `<div class="copy"><div class="num">0${i + 1} / 0${SPHERES.length}</div><h2>${s.title}</h2><p>${s.line}</p><a class="learn" href="#top">Learn more</a></div>`;
+        holder.appendChild(el);
+        return el;
+      });
+
+      const root = document.documentElement;
+      const spot = document.getElementById('spot');
+      const beam = document.getElementById('beam');
+      const stage = new Stage();
+      const view = stage.addView(document.getElementById('fullstage'), null, { spin: 0, orbit: false, cameraZ: 8, fov: 30 });
+      const { key, rim } = view.lights;
+      const fill = new THREE.SpotLight(0xfff4e6, 0, 20, 0.5, 0.6, 1.2);
+      fill.position.set(0, 7, 3);
+      view.scene.add(fill, fill.target);
+
+      const rigs = await Promise.all(SPHERES.map((s) => loadSphere(s.id)));
+      const slots = rigs.map((rig) => {
+        const g = new THREE.Group();
+        g.add(rig);
+        g.visible = false;
+        view.turntable.add(g);
+        return g;
+      });
+
+      const clamp01 = (x) => Math.min(Math.max(x, 0), 1);
+      const smooth = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+      let spinVel = 0;
+
+      view.update = (t, dt) => {
+        const narrow = innerWidth <= 760;
+        const mid = innerHeight / 2;
+        let active = -1;
+        let q = 0;
+        chapters.forEach((el, i) => {
+          const r = el.getBoundingClientRect();
+          const local = (mid - r.top) / r.height;
+          if (local >= 0 && local < 1) { active = i; q = local; }
+        });
+        slots.forEach((g, i) => (g.visible = i === active));
+        let lit = 0;
+        if (active >= 0) {
+          const g = slots[active];
+          const rig = rigs[active];
+          // 0-0.28 rise in darkness, 0.28-0.4 lights snap on, hold, 0.8-1 drift away & dim.
+          const rise = smooth(0.0, 0.3, q);
+          const leave = smooth(0.8, 1.0, q);
+          lit = smooth(0.28, 0.4, q) * (1 - leave);
+          const flash = Math.max(0, 1 - Math.abs(q - 0.36) / 0.05) * 0.6;
+          const side = narrow ? 0 : (active % 2 ? -1 : 1);
+          g.position.set(side * 1.65, narrow ? 1.35 : 0, 0);
+          view.camera.position.z = narrow ? 13 : 8;
+          g.position.y += (1 - rise) * -3.2 + leave * 3.2;
+          g.scale.setScalar(0.85 + 0.15 * rise);
+          spinVel += ((0.6 + 2.4 * (1 - lit)) - spinVel) * Math.min(dt * 4, 1);
+          g.rotation.y += spinVel * dt;
+          rig.userData.setGlow(lit + flash);
+          root.style.setProperty('--accent', SPHERES[active].accent);
+          spot.style.setProperty('--x', side * 21);
+          beam.style.setProperty('--x', side * 21);
+          fill.target.position.copy(g.position);
+          fill.position.set(g.position.x, 7, 3);
+        }
+        chapters.forEach((el, i) => el.style.setProperty('--lit', i === active ? lit.toFixed(3) : 0));
+        spot.style.setProperty('--lit', lit.toFixed(3));
+        beam.style.setProperty('--lit', lit.toFixed(3));
+        key.intensity = 0.15 + 2.4 * lit;
+        rim.intensity = 0.9 + 1.2 * lit; // rim stays on so the silhouette reads in the dark
+        fill.intensity = 40 * lit;
+        view.scene.environmentIntensity = 0.06 + 0.66 * lit;
+      };
+    </script>
+  </body>
+</html>

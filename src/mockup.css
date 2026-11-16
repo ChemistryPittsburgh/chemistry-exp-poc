@@ -1,0 +1,93 @@
+/* Shared mockup chrome: header, hero, footer. Page-specific layout lives in each page. */
+
+.site-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 22px clamp(16px, 8vw, 146px);
+  background: rgba(27, 26, 24, 0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  font-size: 19px;
+}
+.site-links { display: flex; align-items: center; gap: clamp(16px, 3vw, 48px); font-size: 15px; font-weight: 500; }
+.site-links a { text-decoration: none; position: relative; padding: 6px 0; }
+.site-links a.is-active::after {
+  content: '';
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  bottom: -8px;
+  height: 4px;
+  background: var(--orange);
+}
+.site-links .talk { border: 1px solid var(--text); border-radius: 4px; padding: 8px 24px; }
+@media (max-width: 760px) {
+  .site-links a:not(.is-active):not(.talk) { display: none; }
+  .brand span { display: none; }
+}
+
+.hero {
+  padding: clamp(140px, 22vh, 220px) clamp(16px, 8vw, 146px) 40px;
+  position: relative;
+  z-index: 2;
+}
+.hero h1 {
+  margin: 0;
+  font-size: clamp(40px, 6.4vw, 104px);
+  line-height: 0.95;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
+.hero p { margin: 22px 0 0; font-size: clamp(17px, 1.6vw, 24px); max-width: 860px; }
+.hero .rule { display: block; width: 245px; height: 15px; background: var(--orange); margin-top: 48px; }
+
+.eyebrow {
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.site-footer {
+  position: relative;
+  z-index: 2;
+  border-top: 1px solid var(--line);
+  padding: 64px clamp(16px, 8vw, 146px) 120px;
+  color: var(--muted);
+  background: var(--bg);
+}
+.site-footer .footer-inner { display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; }
+.site-footer .brand { color: var(--text); }
+.site-footer p { margin: 0; font-size: 14px; }
+
+.learn {
+  display: inline-block;
+  align-self: flex-start;
+  margin-top: 24px;
+  padding: 12px 28px;
+  border-radius: 6px;
+  background: var(--text);
+  color: #141311;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { scroll-behavior: auto !important; }
+}

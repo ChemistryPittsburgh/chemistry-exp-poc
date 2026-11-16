@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sticky Stage</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="../src/site.css" />
+    <link rel="stylesheet" href="../src/mockup.css" />
+    <style>
+      .expertise {
+        position: relative;
+        z-index: 2;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+        gap: 24px;
+        padding: 0 clamp(16px, 8vw, 146px);
+      }
+      .list { padding: 10vh 0 30vh; }
+      .item { min-height: 72vh; display: flex; flex-direction: column; justify-content: center; position: relative; }
+      .item h2 {
+        margin: 0;
+        font-size: clamp(26px, 3vw, 44px);
+        line-height: 1.05;
+        text-transform: uppercase;
+        font-weight: 700;
+        color: var(--dim);
+        transition: color 0.4s ease;
+        max-width: 12ch;
+      }
+      .item p {
+        margin: 18px 0 0;
+        font-size: clamp(16px, 1.3vw, 20px);
+        color: var(--dim);
+        max-width: 26ch;
+        transition: color 0.4s ease;
+      }
+      .item .num { font-size: 13px; letter-spacing: 0.14em; color: var(--dim); margin-bottom: 14px; transition: color 0.4s; }
+      .item .inner { display: flex; flex-direction: column; }
+      .item .learn { opacity: 0; transform: translateY(8px); transition: opacity 0.4s, transform 0.4s; pointer-events: none; }
+      .item.is-active h2, .item.is-active p { color: var(--text); }
+      .item.is-active .num { color: var(--orange); }
+      .item.is-active .learn { opacity: 1; transform: none; pointer-events: auto; }
+
+      .sticky { position: sticky; top: 0; height: 100vh; display: grid; place-items: center; }
+      .orb-wrap { position: relative; width: min(100%, 78vh); aspect-ratio: 1; }
+      .orb-ring {
+        position: absolute; inset: 9%; border-radius: 50%;
+        border: 1.5px solid rgba(244, 241, 236, 0.16);
+        transition: border-color 0.5s;
+      }
+      .orb-ring::after {
+        /* connector line reaching back toward the list, like the Figma layout */
+        content: ''; position: absolute; top: 50%; right: 100%; width: 40vw; height: 1.5px;
+        background: linear-gradient(to left, rgba(244, 241, 236, 0.22), transparent);
+      }
+      .orb { position: absolute; inset: 0; cursor: grab; touch-action: pan-y; }
+      .orb:active { cursor: grabbing; }
+      .counter { position: absolute; right: 4%; bottom: 6%; font-size: 13px; letter-spacing: 0.14em; color: var(--muted); }
+      .counter b { color: var(--text); font-weight: 500; }
+      .progress { position: absolute; left: 4%; bottom: 6%; display: flex; gap: 6px; }
+      .progress i { width: 26px; height: 3px; background: var(--line); transition: background 0.4s; }
+      .progress i.on { background: var(--orange); }
+
+      @media (max-width: 860px) {
+        .expertise { grid-template-columns: 1fr; }
+        .sticky { order: -1; top: 64px; height: 46vh; z-index: 2; background: var(--bg); }
+        .orb-wrap { width: min(100%, 44vh); }
+        .orb-ring::after { display: none; }
+        .list { padding-top: 0; }
+        .item { min-height: 62vh; justify-content: flex-start; padding-top: 4vh; }
+        .item .inner { position: sticky; top: calc(64px + 46vh + 8px); background: var(--bg); padding: 8px 0 32px; }
+        .list { padding-top: 6vh; }
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body id="top">
+    <section class="hero">
+      <h1>Make it. Move it. Blow it up.</h1>
+      <p>Expertise that blends creativity, digital, and culture to engineer growth.</p>
+      <span class="rule" aria-hidden="true"></span>
+    </section>
+
+    <section class="expertise">
+      <div class="list" id="list"></div>
+      <div class="sticky">
+        <div class="orb-wrap">
+          <div class="orb-ring"></div>
+          <div class="orb" id="orb" aria-label="3D expertise sphere, drag to rotate"></div>
+          <div class="progress" id="progress"></div>
+          <div class="counter" id="counter"></div>
+        </div>
+      </div>
+    </section>
+
+    <script type="module">
+      import * as THREE from 'three';
+      import { Stage } from '../src/stage.js';
+      import { SPHERES, loadSphere } from '../src/models.js';
+      import { mountNav } from '../src/nav.js';
+      import { mountHeader, mountFooter } from '../src/chrome.js';
+
+      mountHeader();
+      mountFooter();
+      mountNav('sticky');
+
+      const list = document.getElementById('list');
+      const progress = document.getElementById('progress');
+      const counter = document.getElementById('counter');
+      const items = SPHERES.map((s, i) => {
+        const el = document.createElement('article');
+        el.className = 'item';
+        el.innerHTML = `<div class="inner"><div class="num">0${i + 1}</div><h2>${s.title}</h2><p>${s.line}</p><a class="learn" href="#top">Learn more</a></div>`;
+        list.appendChild(el);
+        progress.appendChild(document.createElement('i'));
+        return el;
+      });
+
+      const stage = new Stage();
+      stage.canvas.style.zIndex = '3'; // above the list so the sticky orb can mask text on mobile
+      const view = stage.addView(document.getElementById('orb'), null, { spin: 0, cameraZ: 6.2 });
+      const rigs = await Promise.all(SPHERES.map((s) => loadSphere(s.id)));
+      const slots = rigs.map((rig) => {
+        const slot = new THREE.Group();
+        slot.add(rig);
+        slot.visible = false;
+        view.turntable.add(slot);
+        return { slot, rig, state: 'hidden', t0: 0, vel: 0 };
+      });
+
+      const easeOutBack = (x) => 1 + 2.2 * Math.pow(x - 1, 3) + 1.2 * Math.pow(x - 1, 2);
+      const easeIn = (x) => x * x * x;
+      let active = -1;
+
+      function setActive(i, t) {
+        if (i === active) return;
+        if (active >= 0) Object.assign(slots[active], { state: 'out', t0: t });
+        Object.assign(slots[i], { state: 'in', t0: t, vel: 14 });
+        slots[i].slot.rotation.y = -1.2;
+        active = i;
+        items.forEach((el, k) => el.classList.toggle('is-active', k === i));
+        [...progress.children].forEach((el, k) => el.classList.toggle('on', k <= i));
+        counter.innerHTML = `<b>0${i + 1}</b> / 0${SPHERES.length}`;
+      }
+
+      view.update = (t, dt) => {
+        for (const s of slots) {
+          const k = t - s.t0;
+          if (s.state === 'in') {
+            const p = Math.min(k / 0.75, 1);
+            s.slot.visible = true;
+            s.slot.scale.setScalar(Math.max(easeOutBack(p), 0.001));
+            s.slot.position.y = (1 - p) * -0.6;
+            s.vel += (0.85 - s.vel) * Math.min(dt * 3.2, 1);
+            s.rig.userData.setGlow(p);
+            if (p >= 1) s.state = 'idle';
+          } else if (s.state === 'out') {
+            const p = Math.min(k / 0.4, 1);
+            s.slot.scale.setScalar(Math.max(1 - easeIn(p), 0.001));
+            s.slot.position.y = easeIn(p) * 0.8;
+            s.vel += 18 * dt;
+            s.rig.userData.setGlow(1 - p);
+            if (p >= 1) { s.state = 'hidden'; s.slot.visible = false; }
+          } else if (s.state === 'idle') {
+            s.vel += (0.85 - s.vel) * Math.min(dt * 2, 1);
+          }
+          if (s.slot.visible) s.slot.rotation.y += s.vel * dt;
+        }
+      };
+
+      // Active item = the one whose centre is nearest the viewport centre.
+      let queued = false;
+      function onScroll() {
+        if (queued) return;
+        queued = true;
+        requestAnimationFrame(() => {
+          queued = false;
+          let best = 0;
+          if (matchMedia('(max-width: 860px)').matches) {
+            // Stacked layout: the active item is the last one whose top has passed below the stage.
+            items.forEach((el, i) => { if (el.getBoundingClientRect().top < innerHeight * 0.6) best = i; });
+          } else {
+            const mid = innerHeight * 0.5;
+            let bestD = Infinity;
+            items.forEach((el, i) => {
+              const r = el.getBoundingClientRect();
+              const d = Math.abs(r.top + r.height / 2 - mid);
+              if (d < bestD) { bestD = d; best = i; }
+            });
+          }
+          setActive(best, stage.clock.elapsedTime);
+        });
+      }
+      addEventListener('scroll', onScroll, { passive: true });
+      addEventListener('resize', onScroll);
+      onScroll();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Orbit Ring</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="../src/site.css" />
+    <link rel="stylesheet" href="../src/mockup.css" />
+    <style>
+      .ring-section { position: relative; height: 520vh; }
+      .pin { position: sticky; top: 0; height: 100vh; overflow: hidden; z-index: 2; }
+      .scene { position: absolute; inset: 0; }
+      .copy {
+        position: absolute; z-index: 2; left: clamp(16px, 8vw, 146px); bottom: clamp(88px, 14vh, 140px);
+        max-width: min(520px, calc(100vw - 32px));
+      }
+      .copy .num { font-size: 13px; letter-spacing: 0.14em; color: var(--orange); }
+      .copy h2 {
+        margin: 12px 0 0; font-size: clamp(30px, 4vw, 60px); line-height: 1; text-transform: uppercase; font-weight: 700;
+      }
+      .copy p { margin: 16px 0 0; font-size: clamp(16px, 1.4vw, 20px); color: #cfcac2; max-width: 30ch; }
+      .copy .swap { transition: opacity 0.35s ease, transform 0.35s ease; }
+      .copy.is-leaving .swap { opacity: 0; transform: translateY(-14px); }
+      .copy.is-entering .swap { opacity: 0; transform: translateY(14px); transition: none; }
+
+      .dots {
+        position: absolute; z-index: 2; right: clamp(16px, 4vw, 64px); top: 50%; transform: translateY(-50%);
+        display: grid; gap: 14px;
+      }
+      .dots button {
+        all: unset; cursor: pointer; display: flex; align-items: center; gap: 12px; justify-content: flex-end;
+        font-size: 12px; letter-spacing: 0.12em; color: var(--dim); text-transform: uppercase;
+      }
+      .dots button span { opacity: 0; transition: opacity 0.3s; }
+      .dots button:hover span, .dots button.on span { opacity: 1; }
+      .dots button i { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid currentColor; transition: all 0.3s; }
+      .dots button.on { color: var(--text); }
+      .dots button.on i { background: var(--orange); border-color: var(--orange); transform: scale(1.3); }
+      .hint { position: absolute; z-index: 2; left: 50%; top: 18vh; transform: translateX(-50%); color: var(--muted); font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; transition: opacity 0.5s; }
+      @media (max-width: 760px) {
+        .dots span { display: none; }
+        .copy { bottom: 92px; }
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body id="top">
+    <section class="hero">
+      <h1>Make it. Move it. Blow it up.</h1>
+      <p>Expertise that blends creativity, digital, and culture to engineer growth.</p>
+      <span class="rule" aria-hidden="true"></span>
+    </section>
+
+    <section class="ring-section" id="ring">
+      <div class="pin">
+        <div class="scene" id="scene"></div>
+        <div class="hint" id="hint">Scroll to turn</div>
+        <div class="copy" id="copy">
+          <div class="swap"><div class="num" id="num"></div><h2 id="title"></h2><p id="line"></p><a class="learn" href="#top">Learn more</a></div>
+        </div>
+        <nav class="dots" id="dots" aria-label="Expertise areas"></nav>
+      </div>
+    </section>
+
+    <script type="module">
+      import * as THREE from 'three';
+      import { Stage } from '../src/stage.js';
+      import { SPHERES, loadSphere } from '../src/models.js';
+      import { mountNav } from '../src/nav.js';
+      import { mountHeader, mountFooter } from '../src/chrome.js';
+
+      mountHeader();
+      mountFooter();
+      mountNav('orbit');
+
+      const section = document.getElementById('ring');
+      const copy = document.getElementById('copy');
+      const dots = document.getElementById('dots');
+      const N = SPHERES.length;
+      const buttons = SPHERES.map((s, i) => {
+        const b = document.createElement('button');
+        b.innerHTML = `<span>${s.title.split(',')[0].split(' and ')[0]}</span><i></i>`;
+        b.addEventListener('click', () => {
+          const top = section.offsetTop + (i / (N - 1)) * (section.offsetHeight - innerHeight);
+          scrollTo({ top, behavior: 'smooth' });
+        });
+        dots.appendChild(b);
+        return b;
+      });
+
+      const stage = new Stage();
+      const view = stage.addView(document.getElementById('scene'), null, { spin: 0, orbit: false, cameraZ: 11, fov: 30 });
+      view.camera.position.set(0, 1.7, 11);
+      view.camera.lookAt(0, 0.2, 0);
+      view.scene.fog = new THREE.Fog(0x1b1a18, 9.5, 15);
+
+      const R = 2.3;
+      const ring = new THREE.Group();
+      view.turntable.add(ring);
+
+      const orbitLine = new THREE.Mesh(
+        new THREE.TorusGeometry(R, 0.006, 6, 256).rotateX(Math.PI / 2),
+        new THREE.MeshBasicMaterial({ color: 0x5f5b55, fog: true }),
+      );
+      orbitLine.position.y = -1.05;
+      ring.add(orbitLine);
+
+      const rigs = await Promise.all(SPHERES.map((s) => loadSphere(s.id)));
+      const pods = rigs.map((rig, i) => {
+        const pod = new THREE.Group();
+        const a = (i / N) * Math.PI * 2;
+        pod.position.set(Math.sin(a) * R, 0, Math.cos(a) * R);
+        pod.add(rig);
+        ring.add(pod);
+        return { pod, rig, spin: 0 };
+      });
+
+      let shown = -1;
+      function showCopy(i) {
+        if (i === shown) return;
+        shown = i;
+        copy.classList.add('is-leaving');
+        setTimeout(() => {
+          document.getElementById('num').textContent = `0${i + 1} / 0${N}`;
+          document.getElementById('title').textContent = SPHERES[i].title;
+          document.getElementById('line').textContent = SPHERES[i].line;
+          copy.classList.remove('is-leaving');
+          copy.classList.add('is-entering');
+          requestAnimationFrame(() => requestAnimationFrame(() => copy.classList.remove('is-entering')));
+        }, shown === -1 ? 0 : 300);
+        buttons.forEach((b, k) => b.classList.toggle('on', k === i));
+      }
+
+      // Scroll -> ring angle, with a dwell at each sphere so they "click" into place.
+      const dwell = (f) => {
+        const x = Math.min(Math.max((f - 0.3) / 0.4, 0), 1);
+        return x * x * (3 - 2 * x);
+      };
+      let target = 0;
+      let angle = 0;
+      view.update = (t, dt) => {
+        const r = section.getBoundingClientRect();
+        const p = Math.min(Math.max(-r.top / (r.height - innerHeight), 0), 1);
+        const x = p * (N - 1);
+        const stepped = Math.min(Math.floor(x), N - 2) + dwell(x - Math.min(Math.floor(x), N - 2));
+        target = stepped;
+        angle += (target - angle) * Math.min(dt * 6, 1);
+        ring.rotation.y = -angle * ((Math.PI * 2) / N);
+        document.getElementById('hint').style.opacity = p > 0.02 ? 0 : 1;
+
+        const front = Math.round(angle);
+        showCopy(Math.min(Math.max(front, 0), N - 1));
+
+        pods.forEach((pd, i) => {
+          // 0 when at the front, 1 at the back.
+          let d = Math.abs(((i - angle) % N + N) % N);
+          d = Math.min(d, N - d) / (N / 2);
+          const focus = 1 - Math.min(d * 1.6, 1);
+          pd.pod.scale.setScalar(0.55 + 0.45 * focus);
+          pd.pod.position.y = -0.15 * (1 - focus);
+          pd.spin = 0.35 + 1.1 * focus; // the front sphere spins quickest
+          pd.rig.rotation.y += pd.spin * dt;
+          pd.rig.userData.setGlow(0.15 + 0.85 * focus);
+          // keep each sphere's face toward the camera regardless of ring position
+          pd.pod.rotation.y = -ring.rotation.y;
+        });
+        const wide = innerWidth > 900;
+        view.turntable.position.set(wide ? 1.5 : 0, wide ? 0 : 1.6, 0);
+        view.camera.position.z = wide ? 11 : 17;
+        view.scene.fog.near = wide ? 9.5 : 15.5;
+        view.scene.fog.far = wide ? 15 : 21;
+        view.lights.key.intensity = 2.6;
+      };
+    </script>
+  </body>
+</html>

@@ -1,35 +1,44 @@
 # Expertise spheres: Three.js proof of concept
 
-Real-time, procedural 3D spheres. They let us compare true 3D with animated GIFs.
+Four expertise spheres are modeled in Blender, exported as Draco-compressed GLBs, and rendered in real time with Three.js. The goal is to compare true 3D with animated GIFs.
 
-| Model | Module |
-| --- | --- |
-| Puffer ball | `src/spheres/puffer.js` → `createPufferBall()` |
-| Tennis smiley | `src/spheres/tennis.js` → `createTennisBall()` |
-| Data Ritual 8-ball | `src/spheres/eightBall.js` → `createEightBall({ message })` |
-| Robot pod | `src/spheres/robot.js` → `createRobotPod()` |
+**Pages**
 
-Each factory returns a `THREE.Group`, with no model files and no textures to load. Every texture is drawn on a canvas at runtime. If the group sets `group.userData.update(t)`, call it every frame to run the idle animation.
+- `index.html`: gallery of all four spheres, with the original design render as a corner thumbnail.
+- `mockups/sticky.html` (option A): the Expertise list scrolls past a sticky 3D stage. Each sphere spins out and the next one spins in.
+- `mockups/orbit.html` (option B): a pinned section with the four spheres on a 3D ring. Scrolling turns the ring, the front sphere lights up and spins fastest, and the back ones fade into fog.
+- `mockups/spotlight.html` (option C): each sphere rises out of darkness, then a spotlight snaps on, its glowing parts ignite and the title fills in.
+
+Switch between pages with the floating pill at the bottom of each page, or press `[` and `]`.
+
+## Models
+
+| Sphere | GLB | Triangles | Notes |
+| --- | --- | --- | --- |
+| Puffer | `models/puffer.glb` (~310 KB) | 63k | Stitching, wrinkles and pocket welts baked from a 300k-face sculpt into normal and AO maps. Zipper teeth are real geometry. |
+| Tennis | `models/tennis.glb` + `tennis-fur-mask.webp` (~390 KB) | 38k + fur | Painted felt and face texture. The fuzz is ten runtime alpha-cut shells over a 4k-triangle mesh. |
+| 8-ball | `models/eightball.glb` (~150 KB) | 33k | Recessed window, glowing die and real text geometry. Uses alpha glass instead of a transmission pass. |
+| Robot | `models/robot.glb` (~140 KB) | 46k | Solid visor and gasket. Eyes blink and the ear ring pulses at runtime. |
+
+Rebuild the models with Blender 5.2 or later. Cycles bakes on CUDA when it's available:
+
+```sh
+blender -b --factory-startup -P blender/build.py -- puffer tennis eightball robot
+```
+
+## Performance
+
+- **One renderer per page:** `src/stage.js` uses one WebGL renderer and one fixed canvas, and draws each view into its element's rectangle with scissoring. Views that are off screen are skipped.
+- **Cheap materials:** no shadows and no transmission. Lighting is a prefiltered environment plus two directional lights, and the pixel ratio is capped at 1.75.
+- **Small models:** meshes are Draco-compressed and textures are WebP.
+- **Inspection:** add `?spin=0` to any page to freeze the turntables.
 
 ## Run locally
 
-The demo needs an HTTP server because ES modules don't load from `file://`:
+The pages need an HTTP server because ES modules don't load from `file://`:
 
 ```sh
 npx http-server -p 8765 -c-1
-# open http://localhost:8765
 ```
 
-`index.html` loads three@0.170.0 from jsDelivr through an import map. No build step is needed, so the repo root deploys to GitHub Pages as-is.
-
-## Use in a site
-
-```js
-import { mountViewer } from './src/viewer.js';
-import { createRobotPod } from './src/spheres/robot.js';
-
-const viewer = mountViewer(document.querySelector('#hero-orb'), createRobotPod);
-// viewer.dispose() on unmount
-```
-
-In React Three Fiber, use `<primitive object={useMemo(createRobotPod, [])} />` and call `userData.update` inside `useFrame`.
+There's no build step, so the repo root deploys to GitHub Pages as-is.

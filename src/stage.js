@@ -1,0 +1,118 @@
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+/**
+ * One WebGL renderer + one fixed, full-viewport canvas drawing any number of views.
+ * Each view is tied to a DOM element and rendered into that element's rectangle with
+ * scissoring, so a page with four spheres costs one GL context and skips offscreen views.
+ */
+export class Stage {
+  constructor({ maxPixelRatio = 1.75, exposure = 1 } = {}) {
+    this.canvas = document.createElement('canvas');
+    Object.assign(this.canvas.style, {
+      position: 'fixed',
+      inset: '0',
+      width: '100%',
+      height: '100%',
+      pointerEvents: 'none',
+      zIndex: '1',
+    });
+    document.body.appendChild(this.canvas);
+
+    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, alpha: true });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, maxPixelRatio));
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = exposure;
+    this.renderer.setScissorTest(true);
+
+    const pmrem = new THREE.PMREMGenerator(this.renderer);
+    this.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    pmrem.dispose();
+
+    this.views = [];
+    this.clock = new THREE.Clock();
+    this.onFrame = null;
+    this.visibility = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        const view = this.views.find((v) => v.el === entry.target);
+        if (view) view.onScreen = entry.isIntersecting;
+      }
+    });
+    this.renderer.setAnimationLoop(() => this.frame());
+  }
+
+  /**
+   * Adds a view rendering `object` inside `el`.
+   * Options: spin (rad/s), cameraZ, orbit (drag to rotate), lights (bool).
+   */
+  addView(el, object, { spin = 0.9, cameraZ = 5.4, fov = 30, orbit = true, lights = true } = {}) {
+    const scene = new THREE.Scene();
+    scene.environment = this.environment;
+    scene.environmentIntensity = 0.7;
+    const viewLights = {};
+    if (lights) {
+      viewLights.key = new THREE.DirectionalLight(0xffffff, 2.4);
+      viewLights.key.position.set(-3, 4, 4);
+      viewLights.rim = new THREE.DirectionalLight(0xdfe6ff, 1.8);
+      viewLights.rim.position.set(3.5, 2, -3);
+      scene.add(viewLights.key, viewLights.rim);
+    }
+    const camera = new THREE.PerspectiveCamera(fov, 1, 0.1, 100);
+    camera.position.set(0, 0, cameraZ);
+    const turntable = new THREE.Group();
+    if (object) turntable.add(object);
+    scene.add(turntable);
+
+    const spinParam = new URLSearchParams(location.search).get('spin');
+    if (spinParam !== null) spin *= Number(spinParam);
+    const view = { el, scene, camera, turntable, spin, lights: viewLights, onScreen: true, holdUntil: 0, update: null };
+    if (orbit) {
+      const controls = new OrbitControls(camera, el);
+      controls.enablePan = false;
+      controls.enableZoom = false;
+      controls.enableDamping = true;
+      controls.rotateSpeed = 0.7;
+      controls.addEventListener('start', () => (view.holdUntil = Infinity));
+      controls.addEventListener('end', () => (view.holdUntil = this.clock.elapsedTime + 1.2));
+      view.controls = controls;
+    }
+    this.views.push(view);
+    this.visibility.observe(el);
+    return view;
+  }
+
+  setObject(view, object) {
+    view.turntable.clear();
+    if (object) view.turntable.add(object);
+  }
+
+  frame() {
+    const dt = Math.min(this.clock.getDelta(), 0.1);
+    const t = this.clock.elapsedTime;
+    const w = this.canvas.clientWidth;
+    const h = this.canvas.clientHeight;
+    const size = this.renderer.getSize(new THREE.Vector2());
+    if (size.x !== w || size.y !== h) this.renderer.setSize(w, h, false);
+
+    this.onFrame?.(t, dt);
+    this.renderer.setScissor(0, 0, w, h);
+    this.renderer.clear();
+
+    for (const view of this.views) {
+      if (!view.onScreen) continue;
+      const r = view.el.getBoundingClientRect();
+      if (r.bottom < 0 || r.top > h || r.right < 0 || r.left > w || r.width < 2) continue;
+      if (t > view.holdUntil) view.turntable.rotation.y += view.spin * dt;
+      view.update?.(t, dt);
+      for (const child of view.turntable.children) child.userData.update?.(t, dt);
+      view.controls?.update();
+      view.camera.aspect = r.width / r.height;
+      view.camera.updateProjectionMatrix();
+      const y = h - r.bottom;
+      this.renderer.setViewport(r.left, y, r.width, r.height);
+      this.renderer.setScissor(r.left, y, r.width, r.height);
+      this.renderer.render(view.scene, view.camera);
+    }
+  }
+}
