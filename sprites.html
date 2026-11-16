@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sprite Spheres</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="src/site.css" />
+    <style>
+      main { max-width: 1200px; margin: 0 auto; padding: 96px 16px 140px; }
+      h1 { font-size: clamp(28px, 4vw, 44px); font-weight: 700; text-transform: uppercase; margin: 0 0 8px; }
+      p.lede { color: var(--muted); margin: 0 0 24px; max-width: 720px; }
+      .controls {
+        position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center;
+        padding: 14px 0; margin-bottom: 20px; background: var(--bg); border-bottom: 1px solid var(--line);
+      }
+      .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+      .seg button {
+        all: unset; cursor: pointer; font-size: 13px; padding: 6px 12px; border-radius: 999px; color: var(--muted);
+      }
+      .seg button[aria-pressed='true'] { background: var(--text); color: #141311; }
+      .seg button:focus-visible { outline: 2px solid var(--orange); }
+      .label { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); margin-right: 6px; }
+      .total { margin-left: auto; font-size: 13px; color: var(--muted); }
+      .total b { color: var(--text); font-weight: 500; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 20px; }
+      figure {
+        margin: 0; border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+        background: radial-gradient(circle at 50% 40%, #24221f 0%, var(--card) 65%);
+      }
+      .stage { position: relative; aspect-ratio: 1; touch-action: pan-y; user-select: none; }
+      .stage.draggable { cursor: grab; }
+      .stage.draggable:active { cursor: grabbing; }
+      .sprite { position: absolute; inset: 0; }
+      .sprite-layer { position: absolute; inset: 0; background-repeat: no-repeat; }
+      .stage img.anim { position: absolute; inset: 0; width: 100%; height: 100%; }
+      figcaption { display: flex; justify-content: space-between; gap: 12px; padding: 14px 16px; border-top: 1px solid var(--line); background: var(--card); }
+      figcaption b { text-transform: uppercase; font-size: 14px; }
+      figcaption span { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+      .notes { margin-top: 40px; color: var(--muted); max-width: 760px; font-size: 15px; }
+      .notes h2 { color: var(--text); font-size: 16px; text-transform: uppercase; margin: 28px 0 8px; }
+      .notes ul { padding-left: 18px; margin: 0; }
+      .notes li { margin: 4px 0; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Sprite-sheet spheres</h1>
+      <p class="lede">The same four spheres, path-traced in Blender Cycles as 360° turntables and played back as WebP sprite sheets. No WebGL, no 3D library: just an image and a few lines of JS. Switch the frame count and playback mode to judge smoothness against weight.</p>
+
+      <div class="controls" role="group" aria-label="Playback options">
+        <div><span class="label">Frames</span><span class="seg" data-key="frames"><button data-v="24">24</button><button data-v="36">36</button><button data-v="72">72</button></span></div>
+        <div><span class="label">Blend</span><span class="seg" data-key="blend"><button data-v="on">Crossfade</button><button data-v="off">Hard cut</button></span></div>
+        <div><span class="label">Motion</span><span class="seg" data-key="mode"><button data-v="auto">Autoplay</button><button data-v="drag">Drag</button><button data-v="scroll">Scroll</button><button data-v="anim">Animated WebP</button></span></div>
+        <div class="total" id="total"></div>
+      </div>
+
+      <div class="grid" id="grid"></div>
+
+      <section class="notes">
+        <h2>How many frames?</h2>
+        <ul>
+          <li><b>72 frames (5° steps):</b> smooth autoplay even without crossfade. The heaviest option.</li>
+          <li><b>36 frames (10°):</b> with crossfade it's nearly indistinguishable from 72 at this speed, and fine for drag or scroll. The best balance.</li>
+          <li><b>24 frames (15°):</b> crossfade hides most stepping in autoplay. Details like the zipper or the 8-ball window ghost slightly when you stop on a frame mid-blend.</li>
+          <li><b>Animated WebP:</b> 36 frames in a plain <code>&lt;img&gt;</code> with zero JS. It can't be scrubbed or paused, but it's the simplest drop-in.</li>
+        </ul>
+        <h2>Trade-offs vs. real-time 3D</h2>
+        <ul>
+          <li>Better image quality (path-traced light, real hair on the tennis ball) and it runs on anything.</li>
+          <li>Rotation is locked to one axis and one lighting setup, so there's no free orbiting or light-switch effects.</li>
+          <li>Rendered at 400 px per frame, so it's soft on large retina displays. A 2× set roughly triples the weight.</li>
+        </ul>
+      </section>
+    </main>
+
+    <script type="module">
+      import { SpritePlayer } from './src/sprite.js';
+      import { SPHERES } from './src/content.js';
+      import { mountNav } from './src/nav.js';
+
+      mountNav('sprites');
+      const manifest = await (await fetch('sprites/manifest.json')).json();
+      const state = { frames: '36', blend: 'on', mode: 'auto' };
+      const grid = document.getElementById('grid');
+      const kb = (b) => `${Math.round(b / 1024)} KB`;
+
+      const cards = SPHERES.filter((s) => manifest.spheres[s.id]).map((s, i) => {
+        const fig = document.createElement('figure');
+        fig.innerHTML = `<div class="stage"></div><figcaption><b>${s.title}</b><span></span></figcaption>`;
+        grid.appendChild(fig);
+        const stage = fig.querySelector('.stage');
+        const sprite = document.createElement('div');
+        stage.appendChild(sprite);
+        const player = new SpritePlayer(sprite);
+        const card = { id: s.id, fig, stage, sprite, player, angle: i * 0.13, vel: 0, dragging: false };
+
+        stage.addEventListener('pointerdown', (e) => {
+          if (state.mode !== 'drag') return;
+          card.dragging = true;
+          card.lastX = e.clientX;
+          card.vel = 0;
+          stage.setPointerCapture(e.pointerId);
+        });
+        stage.addEventListener('pointermove', (e) => {
+          if (!card.dragging) return;
+          const d = (e.clientX - card.lastX) / stage.clientWidth;
+          card.lastX = e.clientX;
+          card.angle -= d * 0.9;
+          card.vel = -d * 0.9 * 60;
+        });
+        const end = () => (card.dragging = false);
+        stage.addEventListener('pointerup', end);
+        stage.addEventListener('pointercancel', end);
+        return card;
+      });
+
+      async function apply() {
+        let total = 0;
+        await Promise.all(cards.map(async (card) => {
+          const entry = manifest.spheres[card.id];
+          const label = card.fig.querySelector('figcaption span');
+          card.stage.classList.toggle('draggable', state.mode === 'drag');
+          card.stage.querySelector('img.anim')?.remove();
+          if (state.mode === 'anim') {
+            card.sprite.hidden = true;
+            const img = document.createElement('img');
+            img.className = 'anim';
+            img.alt = '';
+            img.src = `sprites/${entry.anim.file}`;
+            card.stage.appendChild(img);
+            label.textContent = `${entry.anim.frames} fr · ${kb(entry.anim.bytes)}`;
+            total += entry.anim.bytes;
+            return;
+          }
+          card.sprite.hidden = false;
+          const sheet = entry.sheets[state.frames];
+          card.player.crossfade = state.blend === 'on';
+          label.textContent = `${state.frames} fr · ${kb(sheet.bytes)}`;
+          total += sheet.bytes;
+          await card.player.load({
+            url: `sprites/${sheet.file}`, frames: Number(state.frames), cols: manifest.cols, rows: sheet.rows,
+          });
+        }));
+        document.getElementById('total').innerHTML = `Page payload <b>${kb(total)}</b>`;
+      }
+
+      for (const seg of document.querySelectorAll('.seg')) {
+        const key = seg.dataset.key;
+        const sync = () => seg.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === state[key])));
+        seg.addEventListener('click', (e) => {
+          const b = e.target.closest('button');
+          if (!b) return;
+          state[key] = b.dataset.v;
+          sync();
+          apply();
+        });
+        sync();
+      }
+
+      let last = performance.now();
+      function tick(now) {
+        const dt = Math.min((now - last) / 1000, 0.1);
+        last = now;
+        for (const card of cards) {
+          if (state.mode === 'auto') card.angle += dt / 6; // one turn every 6 s
+          if (state.mode === 'drag' && !card.dragging) {
+            card.angle += card.vel * dt;
+            card.vel *= Math.pow(0.04, dt);
+          }
+          if (state.mode === 'scroll') {
+            const r = card.stage.getBoundingClientRect();
+            card.angle = (r.top + r.height / 2) / innerHeight * -0.75;
+          }
+          if (state.mode !== 'anim') card.player.setAngle(card.angle);
+        }
+        requestAnimationFrame(tick);
+      }
+      await apply();
+      requestAnimationFrame(tick);
+    </script>
+  </body>
+</html>

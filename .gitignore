@@ -3,3 +3,4 @@ node_modules/
 Thumbs.db
 blender/_textures/
 __pycache__/
+blender/_renders/

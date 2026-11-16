@@ -9,7 +9,18 @@ Four expertise spheres are modeled in Blender, exported as Draco-compressed GLBs
 - `mockups/orbit.html` (option B): a pinned section with the four spheres on a 3D ring. Scrolling turns the ring, the front sphere lights up and spins fastest, and the back ones fade into fog.
 - `mockups/spotlight.html` (option C): each sphere rises out of darkness, then a spotlight snaps on, its glowing parts ignite and the title fills in.
 
+- `sprites.html`: the no-WebGL alternative. Path-traced Cycles turntables play back as WebP sprite sheets. Toggle 24, 36 or 72 frames, crossfade or hard cut, and autoplay, drag, scroll or animated WebP.
+
 Switch between pages with the floating pill at the bottom of each page, or press `[` and `]`.
+
+## Sprite sheets
+
+```sh
+blender -b --factory-startup -P blender/render_sprites.py -- 72 480   # frames, px
+python tools/pack_sprites.py 400                                      # sheets + animated WebP
+```
+
+`render_sprites.py` imports each GLB, adds real particle hair to the tennis ball, and renders a 72-frame turntable with a transparent background. `pack_sprites.py` builds 12-column sheets at 72, 36 and 24 frames (`sprites/<id>-<N>.webp`), a 36-frame animated WebP, and `sprites/manifest.json`. `src/sprite.js` plays a sheet with two stacked background layers, crossfading toward the next frame to hide steps at low frame counts.
 
 ## Models
 

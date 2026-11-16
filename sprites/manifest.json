@@ -1,0 +1,107 @@
+{
+  "frame": 400,
+  "cols": 12,
+  "counts": [
+    72,
+    36,
+    24
+  ],
+  "spheres": {
+    "puffer": {
+      "sheets": {
+        "72": {
+          "file": "puffer-72.webp",
+          "rows": 6,
+          "bytes": 900342
+        },
+        "36": {
+          "file": "puffer-36.webp",
+          "rows": 3,
+          "bytes": 453530
+        },
+        "24": {
+          "file": "puffer-24.webp",
+          "rows": 2,
+          "bytes": 302206
+        }
+      },
+      "anim": {
+        "file": "puffer-anim.webp",
+        "frames": 36,
+        "bytes": 475048
+      }
+    },
+    "tennis": {
+      "sheets": {
+        "72": {
+          "file": "tennis-72.webp",
+          "rows": 6,
+          "bytes": 958324
+        },
+        "36": {
+          "file": "tennis-36.webp",
+          "rows": 3,
+          "bytes": 479684
+        },
+        "24": {
+          "file": "tennis-24.webp",
+          "rows": 2,
+          "bytes": 319674
+        }
+      },
+      "anim": {
+        "file": "tennis-anim.webp",
+        "frames": 36,
+        "bytes": 503598
+      }
+    },
+    "eightball": {
+      "sheets": {
+        "72": {
+          "file": "eightball-72.webp",
+          "rows": 6,
+          "bytes": 677400
+        },
+        "36": {
+          "file": "eightball-36.webp",
+          "rows": 3,
+          "bytes": 340560
+        },
+        "24": {
+          "file": "eightball-24.webp",
+          "rows": 2,
+          "bytes": 228014
+        }
+      },
+      "anim": {
+        "file": "eightball-anim.webp",
+        "frames": 36,
+        "bytes": 404514
+      }
+    },
+    "robot": {
+      "sheets": {
+        "72": {
+          "file": "robot-72.webp",
+          "rows": 6,
+          "bytes": 522772
+        },
+        "36": {
+          "file": "robot-36.webp",
+          "rows": 3,
+          "bytes": 265040
+        },
+        "24": {
+          "file": "robot-24.webp",
+          "rows": 2,
+          "bytes": 178144
+        }
+      },
+      "anim": {
+        "file": "robot-anim.webp",
+        "frames": 36,
+        "bytes": 320448
+      }
+    }
+  }
+}

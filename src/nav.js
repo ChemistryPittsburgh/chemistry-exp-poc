@@ -2,6 +2,7 @@ const ROOT = new URL('../', import.meta.url);
 
 export const PAGES = [
   { id: 'gallery', label: 'Gallery', href: 'index.html' },
+  { id: 'sprites', label: 'Sprites', href: 'sprites.html' },
   { id: 'sticky', label: 'A · Sticky stage', href: 'mockups/sticky.html' },
   { id: 'orbit', label: 'B · Orbit ring', href: 'mockups/orbit.html' },
   { id: 'spotlight', label: 'C · Lights on', href: 'mockups/spotlight.html' },
