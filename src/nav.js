@@ -6,6 +6,7 @@ export const PAGES = [
   { id: 'sticky', label: 'A · Sticky stage', href: 'mockups/sticky.html' },
   { id: 'orbit', label: 'B · Orbit ring', href: 'mockups/orbit.html' },
   { id: 'spotlight', label: 'C · Lights on', href: 'mockups/spotlight.html' },
+  { id: 'realism', label: 'Realism', href: 'realism.html' },
 ];
 
 /** Floating pill to swap between the gallery and the mockups. Arrow keys [ and ] also work. */

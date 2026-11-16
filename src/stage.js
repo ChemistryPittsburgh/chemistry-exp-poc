@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 
 /**
  * One WebGL renderer + one fixed, full-viewport canvas drawing any number of views.
@@ -25,9 +26,8 @@ export class Stage {
     this.renderer.toneMappingExposure = exposure;
     this.renderer.setScissorTest(true);
 
-    const pmrem = new THREE.PMREMGenerator(this.renderer);
-    this.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-    pmrem.dispose();
+    this.pmrem = new THREE.PMREMGenerator(this.renderer);
+    this.environment = this.pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
     this.views = [];
     this.clock = new THREE.Clock();
@@ -43,15 +43,19 @@ export class Stage {
 
   /**
    * Adds a view rendering `object` inside `el`.
-   * Options: spin (rad/s), cameraZ, orbit (drag to rotate), lights (bool).
+   * Options: spin (rad/s), cameraZ, orbit (drag to rotate), lights (bool),
+   * toneMapping (THREE constant, per view), envIntensity.
    *
    * Dragging rotates the object, not the camera: lights and environment stay fixed
    * relative to the viewer, so highlights hold still like a product turned in a studio.
    */
-  addView(el, object, { spin = 0.9, cameraZ = 5.4, fov = 30, orbit = true, lights = true } = {}) {
+  addView(el, object, {
+    spin = 0.9, cameraZ = 5.4, fov = 30, orbit = true, lights = true,
+    toneMapping = THREE.ACESFilmicToneMapping, envIntensity = 0.7,
+  } = {}) {
     const scene = new THREE.Scene();
     scene.environment = this.environment;
-    scene.environmentIntensity = 0.7;
+    scene.environmentIntensity = envIntensity;
     const viewLights = {};
     if (lights) {
       viewLights.key = new THREE.DirectionalLight(0xffffff, 2.4);
@@ -70,7 +74,7 @@ export class Stage {
 
     const spinParam = new URLSearchParams(location.search).get('spin');
     if (spinParam !== null) spin *= Number(spinParam);
-    const view = { el, scene, camera, tilt, turntable, spin, lights: viewLights, onScreen: true, holdUntil: 0, update: null };
+    const view = { el, scene, camera, tilt, turntable, spin, toneMapping, lights: viewLights, onScreen: true, holdUntil: 0, update: null };
     if (orbit) view.drag = this.attachDrag(view);
     this.views.push(view);
     this.visibility.observe(el);
@@ -114,6 +118,15 @@ export class Stage {
     return drag;
   }
 
+  /** Loads an equirect .hdr as a prefiltered environment for view.scene.environment. */
+  async loadEnvironment(url) {
+    const hdr = await new RGBELoader().loadAsync(url);
+    hdr.mapping = THREE.EquirectangularReflectionMapping;
+    const env = this.pmrem.fromEquirectangular(hdr).texture;
+    hdr.dispose();
+    return env;
+  }
+
   setObject(view, object) {
     view.turntable.clear();
     if (object) view.turntable.add(object);
@@ -144,6 +157,7 @@ export class Stage {
       const y = h - r.bottom;
       this.renderer.setViewport(r.left, y, r.width, r.height);
       this.renderer.setScissor(r.left, y, r.width, r.height);
+      this.renderer.toneMapping = view.toneMapping;
       this.renderer.render(view.scene, view.camera);
     }
   }

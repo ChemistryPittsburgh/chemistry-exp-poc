@@ -18,9 +18,9 @@ const cache = new Map();
  * rig.userData.update(t, dt) drives idle animation; rig.userData.setGlow(0..1) dims/lights
  * emissive parts so pages can "switch on" a sphere.
  */
-export async function loadSphere(id) {
-  if (!cache.has(id)) cache.set(id, loader.loadAsync(new URL(`${id}.glb`, MODEL_DIR).href));
-  const gltf = await cache.get(id);
+export async function loadSphere(id, { file = id } = {}) {
+  if (!cache.has(file)) cache.set(file, loader.loadAsync(new URL(`${file}.glb`, MODEL_DIR).href));
+  const gltf = await cache.get(file);
   const root = gltf.scene.clone(true);
   root.traverse((o) => {
     if (o.isMesh) o.material = o.material.clone();

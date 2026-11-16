@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Puffer Realism Pass</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="src/site.css" />
+    <style>
+      main { max-width: 1280px; margin: 0 auto; padding: 120px 16px 120px; }
+      h1 { font-size: clamp(28px, 4vw, 44px); font-weight: 700; text-transform: uppercase; margin: 0 0 8px; }
+      p.lede { color: var(--muted); margin: 0 0 32px; max-width: 720px; }
+      .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 20px; }
+      figure {
+        margin: 0; border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+        background: radial-gradient(circle at 50% 40%, #24221f 0%, var(--card) 65%);
+      }
+      .stage { position: relative; aspect-ratio: 1; cursor: grab; touch-action: pan-y; }
+      .stage:active { cursor: grabbing; }
+      .ref {
+        position: absolute; right: 12px; bottom: 12px; width: 84px; height: 84px; z-index: 2;
+        border-radius: 8px; border: 1px solid var(--line); opacity: 0.9; pointer-events: none;
+      }
+      figcaption { padding: 14px 16px; border-top: 1px solid var(--line); background: var(--card); position: relative; z-index: 2; }
+      figcaption b { text-transform: uppercase; font-size: 14px; letter-spacing: 0.02em; display: block; margin-bottom: 4px; }
+      figcaption span { color: var(--muted); font-size: 13px; }
+      .loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 13px; }
+      ul.notes { color: var(--muted); max-width: 820px; margin: 32px 0 0; padding-left: 18px; line-height: 1.6; font-size: 15px; }
+      ul.notes b { color: var(--fg, #f1efe8); font-weight: 500; }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <main>
+      <h1>Puffer: realism pass</h1>
+      <p class="lede">How far real-time 3D goes toward photo realism on one sphere. Same renderer and frame budget on both sides. Drag either one to turn and tilt it.</p>
+      <div class="pair">
+        <figure>
+          <div class="stage" id="before"><div class="loading">Loading…</div><img class="ref" src="reference/puffer.png" alt="Design reference" /></div>
+          <figcaption><b>Before</b><span>Synthetic room lighting, smooth surfaces, identical baffles.</span></figcaption>
+        </figure>
+        <figure>
+          <div class="stage" id="after"><div class="loading">Loading…</div><img class="ref" src="reference/puffer.png" alt="Design reference" /></div>
+          <figcaption><b>After</b><span>Photographed studio lighting, crinkled nylon, garment details.</span></figcaption>
+        </figure>
+      </div>
+      <ul class="notes">
+        <li><b>Lighting:</b> a real photo-studio HDRI with two softboxes replaces the synthetic room, and AgX tone mapping keeps the color less saturated, more like a photo.</li>
+        <li><b>Fabric:</b> a 4K normal map holds the crinkled nylon creases, wrinkles gathered at every seam, and stitching. A roughness map keeps the puffs glossy and the creases dull.</li>
+        <li><b>Fill:</b> each baffle lofts by a different amount, like uneven down.</li>
+        <li><b>Garment cues:</b> hanging zipper pull, storm-flap edges along the zip, elastic hem binding, chest patch, welt pockets with snaps.</li>
+        <li><b>Cost:</b> 620 KB model (was 310 KB) and a 1.6 MB HDRI, shared by every sphere on a page.</li>
+      </ul>
+    </main>
+    <script type="module">
+      import * as THREE from 'three';
+      import { Stage } from './src/stage.js';
+      import { loadSphere } from './src/models.js';
+      import { mountNav } from './src/nav.js';
+
+      mountNav('realism');
+      const stage = new Stage();
+      const before = stage.addView(document.getElementById('before'), null, { spin: 0.5 });
+      const after = stage.addView(document.getElementById('after'), null, {
+        spin: 0.5, toneMapping: THREE.AgXToneMapping, envIntensity: 1.0,
+      });
+      // Studio HDRI for reflections, plus a key softbox above-front and a cool rim behind.
+      after.lights.key.intensity = 3.2;
+      after.lights.key.position.set(-1.5, 5, 4);
+      after.lights.rim.intensity = 2.2;
+      const params = new URLSearchParams(location.search);
+      after.scene.environmentRotation.y = Number(params.get('envrot') ?? 0);
+
+      const show = (view, id) => (rig) => {
+        stage.setObject(view, rig);
+        document.querySelector(`#${id} .loading`)?.remove();
+      };
+      loadSphere('puffer').then(show(before, 'before'));
+      Promise.all([loadSphere('puffer', { file: 'puffer-v2' }), stage.loadEnvironment('env/studio-dark.hdr')])
+        .then(([rig, env]) => {
+          after.scene.environment = env;
+          show(after, 'after')(rig);
+        });
+    </script>
+  </body>
+</html>
