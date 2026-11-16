@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 /**
@@ -45,6 +44,9 @@ export class Stage {
   /**
    * Adds a view rendering `object` inside `el`.
    * Options: spin (rad/s), cameraZ, orbit (drag to rotate), lights (bool).
+   *
+   * Dragging rotates the object, not the camera: lights and environment stay fixed
+   * relative to the viewer, so highlights hold still like a product turned in a studio.
    */
   addView(el, object, { spin = 0.9, cameraZ = 5.4, fov = 30, orbit = true, lights = true } = {}) {
     const scene = new THREE.Scene();
@@ -60,26 +62,56 @@ export class Stage {
     }
     const camera = new THREE.PerspectiveCamera(fov, 1, 0.1, 100);
     camera.position.set(0, 0, cameraZ);
-    const turntable = new THREE.Group();
+    const tilt = new THREE.Group(); // drag up/down tips the object toward or away from the viewer
+    const turntable = new THREE.Group(); // auto-spin and drag left/right turn around the vertical axis
     if (object) turntable.add(object);
-    scene.add(turntable);
+    tilt.add(turntable);
+    scene.add(tilt);
 
     const spinParam = new URLSearchParams(location.search).get('spin');
     if (spinParam !== null) spin *= Number(spinParam);
-    const view = { el, scene, camera, turntable, spin, lights: viewLights, onScreen: true, holdUntil: 0, update: null };
-    if (orbit) {
-      const controls = new OrbitControls(camera, el);
-      controls.enablePan = false;
-      controls.enableZoom = false;
-      controls.enableDamping = true;
-      controls.rotateSpeed = 0.7;
-      controls.addEventListener('start', () => (view.holdUntil = Infinity));
-      controls.addEventListener('end', () => (view.holdUntil = this.clock.elapsedTime + 1.2));
-      view.controls = controls;
-    }
+    const view = { el, scene, camera, tilt, turntable, spin, lights: viewLights, onScreen: true, holdUntil: 0, update: null };
+    if (orbit) view.drag = this.attachDrag(view);
     this.views.push(view);
     this.visibility.observe(el);
     return view;
+  }
+
+  /** Pointer drag that rotates the object with a little inertia; tilt eases back to level. */
+  attachDrag(view) {
+    const drag = { active: false, x: 0, y: 0, vx: 0, vy: 0 };
+    const el = view.el;
+    const speed = 0.009; // radians per pixel
+    el.addEventListener('pointerdown', (e) => {
+      Object.assign(drag, { active: true, x: e.clientX, y: e.clientY, vx: 0, vy: 0 });
+      view.holdUntil = Infinity;
+    });
+    window.addEventListener('pointermove', (e) => {
+      if (!drag.active) return;
+      drag.vx = (e.clientX - drag.x) * speed;
+      drag.vy = (e.clientY - drag.y) * speed;
+      drag.x = e.clientX;
+      drag.y = e.clientY;
+      view.turntable.rotation.y += drag.vx;
+      view.tilt.rotation.x = THREE.MathUtils.clamp(view.tilt.rotation.x + drag.vy, -1.2, 1.2);
+    });
+    const end = () => {
+      if (!drag.active) return;
+      drag.active = false;
+      view.holdUntil = this.clock.elapsedTime + 1.2;
+    };
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+    drag.step = (dt) => {
+      if (drag.active) return;
+      const decay = Math.exp(-dt * 6);
+      drag.vx *= decay;
+      drag.vy *= decay;
+      view.turntable.rotation.y += drag.vx;
+      view.tilt.rotation.x = THREE.MathUtils.clamp(view.tilt.rotation.x + drag.vy, -1.2, 1.2);
+      if (this.clock.elapsedTime > view.holdUntil) view.tilt.rotation.x *= Math.exp(-dt * 2);
+    };
+    return drag;
   }
 
   setObject(view, object) {
@@ -106,7 +138,7 @@ export class Stage {
       if (t > view.holdUntil) view.turntable.rotation.y += view.spin * dt;
       view.update?.(t, dt);
       for (const child of view.turntable.children) child.userData.update?.(t, dt);
-      view.controls?.update();
+      view.drag?.step(dt);
       view.camera.aspect = r.width / r.height;
       view.camera.updateProjectionMatrix();
       const y = h - r.bottom;
