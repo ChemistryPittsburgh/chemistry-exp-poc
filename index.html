@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Expertise Spheres</title>
+    <style>
+      :root {
+        --bg: #151412;
+        --card: #1b1a18;
+        --line: #2a2825;
+        --text: #f1eee8;
+        --muted: #8f8a82;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 15px/1.4 system-ui, -apple-system, Segoe UI, sans-serif;
+      }
+      main { max-width: 1200px; margin: 0 auto; padding: 40px 16px 64px; }
+      h1 { font-size: 28px; font-weight: 600; margin: 0 0 6px; }
+      p.lede { color: var(--muted); margin: 0 0 28px; }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr));
+        gap: 20px;
+      }
+      figure {
+        margin: 0;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        overflow: hidden;
+      }
+      .stage { position: relative; aspect-ratio: 1; cursor: grab; }
+      .stage:active { cursor: grabbing; }
+      .stage canvas { display: block; width: 100%; height: 100%; }
+      figcaption {
+        display: flex; justify-content: space-between; gap: 12px;
+        padding: 12px 16px; border-top: 1px solid var(--line);
+      }
+      figcaption span { color: var(--muted); font-size: 13px; }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <main>
+      <h1>Expertise spheres in Three.js</h1>
+      <p class="lede">Procedural, real-time 3D spheres. Drag to orbit.</p>
+      <div class="grid">
+        <figure><div class="stage" data-model="puffer"></div><figcaption>Puffer ball<span>Market &amp; consumer research</span></figcaption></figure>
+        <figure><div class="stage" data-model="tennis"></div><figcaption>Tennis smiley<span>Creative &amp; Brand Innovation</span></figcaption></figure>
+        <figure><div class="stage" data-model="eight"></div><figcaption>Data Ritual 8-ball<span>Media, Performance &amp; Intelligence</span></figcaption></figure>
+        <figure><div class="stage" data-model="robot"></div><figcaption>Robot pod<span>Digital Experience &amp; Engagement</span></figcaption></figure>
+      </div>
+    </main>
+    <script type="module">
+      import { mountViewer } from './src/viewer.js';
+      import { createPufferBall } from './src/spheres/puffer.js';
+      import { createTennisBall } from './src/spheres/tennis.js';
+      import { createEightBall } from './src/spheres/eightBall.js';
+      import { createRobotPod } from './src/spheres/robot.js';
+
+      const factories = {
+        puffer: createPufferBall,
+        tennis: createTennisBall,
+        eight: createEightBall,
+        robot: createRobotPod,
+      };
+      for (const el of document.querySelectorAll('.stage')) {
+        mountViewer(el, () => factories[el.dataset.model]());
+      }
+    </script>
+  </body>
+</html>
