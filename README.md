@@ -31,7 +31,7 @@ python tools/pack_sprites.py 400                                      # sheets +
 | Tennis | `models/tennis.glb` + `tennis-fur-mask.webp` (~390 KB) | 38k + fur | Painted felt and face texture. The fuzz is ten runtime alpha-cut shells over a 4k-triangle mesh. |
 | 8-ball | `models/eightball.glb` (~150 KB) | 33k | Recessed window, glowing die and real text geometry. Uses alpha glass instead of a transmission pass. |
 | Robot | `models/robot.glb` (~140 KB) | 46k | Solid visor and gasket. Eyes blink and the ear ring pulses at runtime. |
-| Puffer v2 | `models/puffer-v2.glb` (~950 KB) | 87k | Realism pass, built by `blender/puffer_v2.py`. Detail maps are computed with numpy instead of baked. Lit by `env/studio-dark.hdr` on `realism.html`. |
+| Puffer v2 | `models/puffer-v2.glb` (~980 KB) | 111k | Realism pass, built by `blender/puffer_v2.py`. The shell is inflated with Blender's cloth solver (`blender/puffer_cloth.py`; `-- preview <pressure> <shrink>` renders a quick clay test). Detail maps are computed with numpy instead of baked. Lit by `env/studio-dark.hdr` on `realism.html`. |
 
 Rebuild the models with Blender 5.2 or later. Cycles bakes on CUDA when it's available:
 

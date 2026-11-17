@@ -56,9 +56,11 @@
       <ul class="notes">
         <li><b>Lighting:</b> a real photo-studio HDRI with two softboxes replaces the synthetic room, and AgX tone mapping keeps the color less saturated, more like a photo.</li>
         <li><b>Fabric:</b> a 4K normal map holds the crinkled nylon creases, wrinkles gathered at every seam, and stitching. A roughness map keeps the puffs glossy and the creases dull.</li>
-        <li><b>Fill:</b> each baffle lofts by a different amount, like uneven down.</li>
+        <li><b>Shape:</b> the shell is inflated with Blender's cloth solver: pinned along every stitch line, given a little spare fabric and pumped up with internal pressure. The puffs come out uneven, and the slack gathers into real wrinkles at the seams.</li>
+        <li><b>Collar:</b> rolled edge, dark lining inside, topstitching under the fold and a seam bead where it joins the body.</li>
+        <li><b>Shadows:</b> the key light casts real-time shadows, so the collar, zip and pull tab shade the body as it turns. Contact shading comes from ambient occlusion baked in Blender, which costs nothing at runtime.</li>
         <li><b>Garment cues:</b> hanging zipper pull, storm-flap edges along the zip, elastic hem binding, chest patch, welt pockets with snaps.</li>
-        <li><b>Cost:</b> 950 KB model (was 310 KB), mostly the 4K normal map, plus a 1.4 MB HDRI shared by every sphere on a page.</li>
+        <li><b>Cost:</b> 980 KB model (was 310 KB), mostly the 4K normal map, plus a 1.4 MB HDRI shared by every sphere on a page. Shadows add one extra render of the sphere per frame, so on a page with four spheres they'd suit the active one only.</li>
       </ul>
     </main>
     <script type="module">
@@ -77,6 +79,17 @@
       after.lights.key.intensity = 3.2;
       after.lights.key.position.set(-1.5, 5, 4);
       after.lights.rim.intensity = 2.2;
+      // Real-time shadows on the After view only: the key light casts, so the collar, zip and
+      // pull tab shadow the body as it turns. One 2048 map, soft PCF filtering.
+      stage.renderer.shadowMap.enabled = true;
+      stage.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      const key = after.lights.key;
+      key.castShadow = true;
+      key.shadow.mapSize.set(2048, 2048);
+      Object.assign(key.shadow.camera, { left: -1.3, right: 1.3, top: 1.3, bottom: -1.3, near: 1, far: 14 });
+      key.shadow.bias = -0.0004;
+      key.shadow.normalBias = 0.015;
+      key.shadow.radius = 3;
       const params = new URLSearchParams(location.search);
       after.scene.environmentRotation.y = Number(params.get('envrot') ?? 0);
 
@@ -88,6 +101,9 @@
       Promise.all([loadSphere('puffer', { file: 'puffer-v2' }), stage.loadEnvironment('env/studio-dark.hdr')])
         .then(([rig, env]) => {
           after.scene.environment = env;
+          rig.traverse((o) => {
+            if (o.isMesh) o.castShadow = o.receiveShadow = true;
+          });
           show(after, 'after')(rig);
         });
     </script>

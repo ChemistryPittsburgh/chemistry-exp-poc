@@ -140,12 +140,12 @@ def detail_height(d):
     cyl_b = np.stack([np.cos(lon) * 9.0, np.sin(lon) * 9.0, theta * 2.2 + warp], axis=1)
     rib_b = np.abs(fbm(N_SEAMW, cyl_b, 2))
     fall_b = np.exp(-db / 0.06)
-    h -= 0.014 * fall_b * rib_b
+    h -= 0.007 * fall_b * rib_b
 
     cyl_p = np.stack([np.cos(lon) * 1.2 + warp, np.sin(lon) * 1.2, theta * 30.0], axis=1)
     rib_p = np.abs(fbm(N_SEAMW, cyl_p + 40.0, 2))
     fall_p = np.exp(-dp / 0.045) * (theta > THETA_TOP)
-    h -= 0.010 * fall_p * rib_p
+    h -= 0.005 * fall_p * rib_p
 
     # Nylon crinkle: sharp creases (|noise| valleys) all over, finer on the tight areas.
     crink = np.abs(fbm(N_CRINK, d * 22.0 + warp[:, None] * 0.3, 3))
@@ -326,6 +326,44 @@ def build_patch():
     return patch
 
 
+def build_collar():
+    """Stand collar: nylon outer wall with a rolled top edge, dark lining inside, a
+    topstitch line under the fold and a bead seam where it joins the body. The outer wall
+    gets a little fabric irregularity so it stops reading as a turned bowl."""
+    prof = collar_profile()
+    top = max(range(len(prof)), key=lambda i: prof[i][1])
+    outer = c.lathe("Collar", prof[top:], steps=192, merge_axis=False)
+    inner = c.lathe("CollarLining", prof[:top + 1], steps=192, merge_axis=False)
+    me = outer.data
+    co = np.zeros(len(me.vertices) * 3)
+    me.vertices.foreach_get("co", co)
+    co = co.reshape(-1, 3)
+    radial = co.copy()
+    radial[:, 2] = 0
+    rn = radial / np.maximum(np.linalg.norm(radial, axis=1, keepdims=True), 1e-6)
+    wob = 0.006 * fbm(N_LUMP, co * 5.0 + 3.0, 2) + 0.0025 * np.abs(N_SEAMW(np.stack(
+        [co[:, 0] * 3.0, co[:, 1] * 3.0, co[:, 2] * 26.0], axis=1)))
+    fade = np.clip((co[:, 2] - 0.72) / 0.06, 0, 1) * np.clip((1.0 - co[:, 2]) / 0.03, 0, 1)
+    co += rn * (wob * fade)[:, None]
+    me.vertices.foreach_set("co", co.ravel())
+    me.update()
+    c.smooth(outer, 180)
+    c.smooth(inner, 180)
+
+    def outer_r(z):
+        pts = prof[top:]
+        for (r0, z0), (r1, z1) in zip(pts, pts[1:]):
+            if z1 <= z <= z0:
+                return r0 + (r1 - r0) * (z - z0) / (z1 - z0)
+        return pts[-1][0]
+
+    stitch = c.torus("CollarStitch", outer_r(0.93) + 0.004, 0.0022, steps=192, ring=8, z=0.93)
+    bead = c.torus("CollarBead", outer_r(0.735) + 0.004, 0.011, steps=192, ring=12, z=0.735)
+    trim = c.join([stitch, bead], "CollarTrim")
+    c.smooth(trim, 180)
+    return outer, inner, trim
+
+
 def build_hem():
     """Elastic binding round the bottom opening, plus a dark inner lining."""
     theta0 = THETA_BOTTOM + 0.005
@@ -347,26 +385,26 @@ def build():
 
     nylon = dict(color=c.srgb("#1b28b8"), rough=0.3, sheen=0.35, sheen_tint=c.srgb("#9fb0ff"), sheen_rough=0.3)
 
-    body = c.uv_sphere("Puffer", segments=192, rings=112)
-    me = body.data
-    co = np.zeros(len(me.vertices) * 3)
-    me.vertices.foreach_get("co", co)
-    co = co.reshape(-1, 3)
-    d = co / np.linalg.norm(co, axis=1, keepdims=True)
-    me.vertices.foreach_set("co", (d * radius(d)[:, None]).ravel())
-    me.update()
+    # Shell: inflated with the cloth solver (see puffer_cloth.py), then every trim that sits
+    # on the body looks up the simulated surface instead of the radius formula.
+    global radius1
+    import puffer_cloth
+    body = puffer_cloth.simulate(segments=224, rings=128, pressure=25.0, shrink=-0.02, frames=40)
+    radius1 = puffer_cloth.surface_lookup(body)
     c.smooth(body, 180)
     body_mat = c.principled("Nylon", **nylon)
     c.use_normal_map(body_mat, normal_img, strength=1.0)
     use_roughness(body_mat, rough_img)
     c.assign(body, body_mat)
 
-    collar = c.lathe("Collar", collar_profile() + [(0.38, 0.74)], steps=176)
-    c.smooth(collar, 50)
+    collar, collar_in, collar_trim = build_collar()
     c.assign(collar, c.principled("NylonCollar", **nylon))
+    lining = c.principled("Lining", color=c.srgb("#0b0d26"), rough=0.85, sheen=0.3, sheen_tint=c.srgb("#3a4590"))
+    c.assign(collar_in, lining)
+    c.assign(collar_trim, c.principled("NylonSeam", **dict(nylon, rough=0.45)))
 
-    neck = c.lathe("NeckHole", [(0.0, 0.86), (0.39, 0.86)], steps=64)
-    c.assign(neck, c.principled("Lining", color=c.srgb("#0a0b1e"), rough=0.9))
+    neck = c.lathe("NeckHole", [(0.0, 0.955), (0.392, 0.955)], steps=64)  # covers the body cap
+    c.assign(neck, c.principled("NeckDark", color=c.srgb("#05061a"), rough=0.95))
 
     teeth, tape, flap, slider, tab = build_zipper()
     c.assign(teeth, c.principled("ZipTeeth", color=c.srgb("#141416"), rough=0.35, metal=0.0, coat=0.5))
@@ -402,7 +440,7 @@ def build():
     c.bake(body, ao, "AO", samples=128)
     c.use_occlusion(body_mat, ao)
 
-    c.export_glb("puffer-v2", [body, collar, neck, teeth, tape, flap, slider, tab, hem, lining, patch, *snaps])
+    c.export_glb("puffer-v2", [body, collar, collar_in, collar_trim, neck, teeth, tape, flap, slider, tab, hem, lining, patch, *snaps])
 
 
 if __name__ == "__main__":
